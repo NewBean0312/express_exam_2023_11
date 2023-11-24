@@ -42,6 +42,12 @@ app.get("/wise-sayings/:id", async (req, res) => {
     id,
   ]);
 
+  // 없는 id를 요청하는 경우
+  if (rows.length == 0) {
+    res.status(404).send("not found");
+    return;
+  }
+
   // json으로 담음
   res.json(rows[0]);
 });
