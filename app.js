@@ -13,6 +13,7 @@ const pool = mysql.createPool({
 });
 
 const app = express();
+app.use(express.json());
 const port = 3000;
 
 const wiseSayings = [
@@ -34,6 +35,39 @@ app.get("/wise-sayings", async (req, res) => {
   res.json(rows);
 });
 
+app.post("/wise-sayings", async (req, res) => {
+  const { author, content } = req.body;
+
+  if (!author) {
+    res.status(400).json({
+      msg: "author required",
+    });
+    return;
+  }
+
+  if (!content) {
+    res.status(400).json({
+      msg: "content required",
+    });
+    return;
+  }
+
+  const [rs] = await pool.query(
+    `
+    INSERT INTO wise_saying
+    SET regDate = NOW(),
+    content = ?,
+    author = ?
+    `,
+    [content, author]
+  );
+
+  // 성공 및 전송
+  res.status(201).json({
+    id: rs.insertId,
+  });
+});
+
 // 데이터를 원하는 id만 받아오기
 app.get("/wise-sayings/:id", async (req, res) => {
   // 요청을 보냄
@@ -48,8 +82,52 @@ app.get("/wise-sayings/:id", async (req, res) => {
     return;
   }
 
-  // json으로 담음
+  // json으로 담음s
   res.json(rows[0]);
+});
+
+app.patch("/wise-sayings/:id", async (req, res) => {
+  // 요청을 보냄
+  const { id } = req.params;
+  const { author, content } = req.body;
+  const [rows] = await pool.query("SELECT * FROM wise_saying WHERE id = ?", [
+    id,
+  ]);
+
+  if (rows.length == 0) {
+    res.status(404).send("not found");
+    return;
+  }
+
+  if (rows.author == 0) {
+    res.status(400).json({
+      msg: "author required",
+    });
+    return;
+  }
+
+  if (!content) {
+    res.status(400).json({
+      msg: "content required",
+    });
+    return;
+  }
+
+  const [rs] = await pool.query(
+    `
+    UPDATE wise_saying
+    SET content = ?,
+    author = ?
+    WHERE id = ?
+    `,
+    [content, author, id]
+  );
+
+  res.status(201).json({
+    id,
+    author,
+    content,
+  });
 });
 
 app.listen(port, () => {
